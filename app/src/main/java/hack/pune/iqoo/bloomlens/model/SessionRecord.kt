@@ -17,6 +17,8 @@ data class SessionRecord(
     val problemText: String,
     val sessionGoal: String? = null,
     val imagePath: String? = null,
+    /** Whether the tutor recognized [problemText] as an actual problem, vs. an unrelated photo. */
+    val recognized: Boolean = true,
     val messages: List<StoredChatEntry>,
     val isComplete: Boolean,
 )

@@ -56,6 +56,9 @@ class MainViewModel(
     /** Path to the current problem photo, persisted to disk so history survives app restarts. */
     private var currentImagePath: String? = null
 
+    /** Whether the tutor recognized the current problem photo as an actual problem. */
+    private var currentRecognized: Boolean = true
+
     init {
         val existing = personaRepository.getPersona()
         if (existing != null) {
@@ -122,6 +125,7 @@ class MainViewModel(
                     val sessionId = System.currentTimeMillis().toString()
                     currentSessionId = sessionId
                     currentImagePath = withContext(Dispatchers.IO) { imageStorage.save(bitmap, sessionId) }
+                    currentRecognized = turn.recognized
                     _state.value = AppScreenState.Tutoring(
                         frame = bitmap,
                         session = TutorSession(
@@ -198,6 +202,38 @@ class MainViewModel(
         _historyView.value = null
     }
 
+    /** Resumes a past session (finished or in-progress) as the live tutor chat. */
+    fun onContinueSession(session: SessionRecord) {
+        viewModelScope.launch {
+            val restoredFrame = session.imagePath?.let { path -> withContext(Dispatchers.IO) { imageStorage.load(path) } }
+            val restoredMessages = session.messages.map {
+                ChatEntry(
+                    fromTutor = it.fromTutor,
+                    text = it.text,
+                    bloomLevel = it.bloomLevel?.let { label -> BloomLevel.fromLabel(label) },
+                    isDevilsAdvocate = it.isDevilsAdvocate,
+                )
+            }
+            val lastLevel = restoredMessages.lastOrNull { it.fromTutor }?.bloomLevel ?: BloomLevel.REMEMBER
+
+            currentSessionId = session.id
+            currentImagePath = session.imagePath
+            currentRecognized = session.recognized
+            sessionGoal = session.sessionGoal
+            _historyView.value = null
+            _state.value = AppScreenState.Tutoring(
+                frame = restoredFrame,
+                session = TutorSession(
+                    problemText = session.problemText,
+                    messages = restoredMessages,
+                    currentLevel = lastLevel,
+                    isComplete = session.isComplete,
+                ),
+                sending = false,
+            )
+        }
+    }
+
     private fun applyTutorTurn(turn: TutorTurn) {
         val latest = _state.value
         if (latest !is AppScreenState.Tutoring) return
@@ -230,6 +266,7 @@ class MainViewModel(
                 problemText = tutoring.session.problemText,
                 sessionGoal = sessionGoal,
                 imagePath = currentImagePath,
+                recognized = currentRecognized,
                 messages = tutoring.session.messages.map {
                     StoredChatEntry(
                         fromTutor = it.fromTutor,
@@ -262,6 +299,7 @@ class MainViewModel(
         sessionGoal = null
         currentSessionId = null
         currentImagePath = null
+        currentRecognized = true
         _state.value = AppScreenState.Capturing
     }
 

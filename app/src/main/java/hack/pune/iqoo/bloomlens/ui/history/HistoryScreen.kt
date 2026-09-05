@@ -21,6 +21,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -78,6 +79,38 @@ fun HistoryListScreen(
     }
 }
 
+/**
+ * OCR often picks up phone/browser chrome above the actual problem text - a status-bar clock,
+ * a difficulty chip - before the real statement. A raw prefix of the OCR text then shows that
+ * chrome ("3:37", "Easy") instead of anything useful, so we skip lines that look like chrome
+ * and preview from the first line that looks like real content.
+ */
+private const val MIN_MEANINGFUL_LINE_LENGTH = 12
+private const val MIN_MEANINGFUL_LETTER_COUNT = 8
+private val CLOCK_LINE = Regex("^\\d{1,2}:\\d{2}(\\s?[APap][Mm])?$")
+private val CHROME_WORDS = setOf(
+    "easy", "medium", "hard", "topics", "companies", "solutions", "submissions", "description",
+)
+
+private fun isMeaningfulLine(line: String): Boolean {
+    if (line.length < MIN_MEANINGFUL_LINE_LENGTH) return false
+    if (CLOCK_LINE.matches(line)) return false
+    if (line.lowercase() in CHROME_WORDS) return false
+    return line.count { it.isLetter() } >= MIN_MEANINGFUL_LETTER_COUNT
+}
+
+private fun shortDescription(recognized: Boolean, problemText: String): String {
+    if (!recognized) return "Not recognized as a problem - try a clearer photo"
+    val lines = problemText.lines()
+    val startIndex = lines.indexOfFirst { isMeaningfulLine(it.trim()) }
+    val preview = if (startIndex >= 0) {
+        lines.drop(startIndex).joinToString(" ") { it.trim() }
+    } else {
+        problemText
+    }.trim()
+    return if (preview.length >= MIN_MEANINGFUL_LINE_LENGTH) preview.take(120) else "Photo text wasn't clearly recognized"
+}
+
 @Composable
 private fun SessionCard(record: SessionRecord, onClick: () -> Unit) {
     val levelsCovered = record.messages.mapNotNull { it.bloomLevel }.distinct()
@@ -106,7 +139,7 @@ private fun SessionCard(record: SessionRecord, onClick: () -> Unit) {
                     style = MaterialTheme.typography.labelLarge,
                 )
                 Text(
-                    record.problemText.take(120),
+                    shortDescription(record.recognized, record.problemText),
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
                 )
@@ -129,7 +162,7 @@ private fun SessionCard(record: SessionRecord, onClick: () -> Unit) {
 }
 
 @Composable
-fun HistoryDetailScreen(session: SessionRecord, onBack: () -> Unit) {
+fun HistoryDetailScreen(session: SessionRecord, onBack: () -> Unit, onContinue: (SessionRecord) -> Unit) {
     val fullImage = rememberBitmapFromPath(session.imagePath)
     var showFullImage by remember { mutableStateOf(false) }
     if (showFullImage && fullImage != null) {
@@ -144,9 +177,15 @@ fun HistoryDetailScreen(session: SessionRecord, onBack: () -> Unit) {
                     .statusBarsPadding()
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                IconButton(onClick = onBack) { Text("←") }
-                Text("Session Detail", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack) { Text("←") }
+                    Text("Session Detail", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 8.dp))
+                }
+                TextButton(onClick = { onContinue(session) }) {
+                    Text("Continue chat")
+                }
             }
 
             if (fullImage != null) {

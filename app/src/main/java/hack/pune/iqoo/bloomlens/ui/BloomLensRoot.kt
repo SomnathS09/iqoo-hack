@@ -33,6 +33,7 @@ fun BloomLensRoot(viewModel: MainViewModel) {
             is HistoryViewState.DetailView -> HistoryDetailScreen(
                 session = history.session,
                 onBack = viewModel::onBackFromHistoryDetail,
+                onContinue = viewModel::onContinueSession,
             )
 
             null -> when (val current = state) {
