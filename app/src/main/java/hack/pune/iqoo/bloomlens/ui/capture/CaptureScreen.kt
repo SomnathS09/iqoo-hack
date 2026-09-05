@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -48,6 +49,7 @@ fun CaptureScreen(
     state: AppScreenState,
     viewModel: MainViewModel,
     onOpenHistory: () -> Unit,
+    onOpenProviderMode: () -> Unit,
     stars: Int,
     onOpenRewards: () -> Unit,
 ) {
@@ -144,14 +146,14 @@ fun CaptureScreen(
                 }
             }
 
-            IconButton(
-                onClick = onOpenHistory,
+            Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .statusBarsPadding()
                     .padding(4.dp),
             ) {
-                Text("📜")
+                IconButton(onClick = onOpenHistory) { Text("📜") }
+                IconButton(onClick = onOpenProviderMode) { Text("📡") }
             }
 
             TextButton(

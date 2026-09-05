@@ -18,11 +18,15 @@ class AppContainer(context: Context) {
     private val appContext = context.applicationContext
     private val personaRepository = PersonaRepository(appContext)
     private val modelRepository = GenieModelRepository(appContext)
-    private val historyRepository = HistoryRepository(appContext)
-    private val imageStorage = ImageStorage(appContext)
-    private val textRecognizer = TextRecognizer()
-    private val onDeviceLlm = GenieOnDeviceLlm()
     private val rewardsRepository = RewardsRepository(appContext)
+
+    // Not private: Provider Mode's foreground service (ProviderServerService) reaches these
+    // through BloomLensApp.container to share the exact same NPU model handle, OCR client, and
+    // history log the native UI uses - a separate instance would double-load the model.
+    val historyRepository = HistoryRepository(appContext)
+    val imageStorage = ImageStorage(appContext)
+    val textRecognizer = TextRecognizer()
+    val onDeviceLlm = GenieOnDeviceLlm()
 
     val viewModelFactory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")

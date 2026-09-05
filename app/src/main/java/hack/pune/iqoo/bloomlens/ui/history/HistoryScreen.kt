@@ -138,6 +138,9 @@ private fun SessionCard(record: SessionRecord, onClick: () -> Unit) {
                     DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(record.timestamp)),
                     style = MaterialTheme.typography.labelLarge,
                 )
+                if (!record.studentName.isNullOrBlank()) {
+                    Text("👤 ${record.studentName} (Provider Mode)", style = MaterialTheme.typography.labelSmall, color = HintPurple)
+                }
                 Text(
                     shortDescription(record.recognized, record.problemText),
                     style = MaterialTheme.typography.bodyMedium,
@@ -197,6 +200,15 @@ fun HistoryDetailScreen(session: SessionRecord, onBack: () -> Unit, onContinue: 
                         .height(120.dp)
                         .clickable { showFullImage = true },
                     contentScale = ContentScale.Crop,
+                )
+            }
+
+            if (!session.studentName.isNullOrBlank()) {
+                Text(
+                    "👤 ${session.studentName} - via Provider Mode",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = HintPurple,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
 

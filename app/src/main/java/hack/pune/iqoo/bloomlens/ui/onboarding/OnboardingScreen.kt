@@ -19,9 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-
-private val SKILL_LEVELS = listOf("Beginner", "Intermediate", "Advanced")
-private val FOCUS_AREAS = listOf("Coding & DSA", "Math", "Science", "General")
+import hack.pune.iqoo.bloomlens.model.PersonaOptions
 
 @Composable
 fun OnboardingScreen(onComplete: (skillLevel: String, focusArea: String) -> Unit) {
@@ -48,7 +46,7 @@ fun OnboardingScreen(onComplete: (skillLevel: String, focusArea: String) -> Unit
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            SKILL_LEVELS.forEach { level ->
+            PersonaOptions.SKILL_LEVELS.forEach { level ->
                 FilterChip(selected = skillLevel == level, onClick = { skillLevel = level }, label = { Text(level) })
             }
         }
@@ -60,7 +58,7 @@ fun OnboardingScreen(onComplete: (skillLevel: String, focusArea: String) -> Unit
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            FOCUS_AREAS.forEach { area ->
+            PersonaOptions.FOCUS_AREAS.forEach { area ->
                 FilterChip(selected = focusArea == area, onClick = { focusArea = area }, label = { Text(area) })
             }
         }

@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import hack.pune.iqoo.bloomlens.state.AppScreenState
@@ -14,6 +17,7 @@ import hack.pune.iqoo.bloomlens.ui.download.DownloadScreen
 import hack.pune.iqoo.bloomlens.ui.history.HistoryDetailScreen
 import hack.pune.iqoo.bloomlens.ui.history.HistoryListScreen
 import hack.pune.iqoo.bloomlens.ui.onboarding.OnboardingScreen
+import hack.pune.iqoo.bloomlens.ui.provider.ProviderModeScreen
 import hack.pune.iqoo.bloomlens.ui.rewards.RewardsDialog
 import hack.pune.iqoo.bloomlens.ui.tutor.TutorScreen
 
@@ -24,9 +28,15 @@ fun BloomLensRoot(viewModel: MainViewModel) {
     val historyView by viewModel.historyView.collectAsStateWithLifecycle()
     val stars by viewModel.stars.collectAsStateWithLifecycle()
     val showRewards by viewModel.showRewards.collectAsStateWithLifecycle()
+    var showProviderMode by remember { mutableStateOf(false) }
 
     if (showRewards) {
         RewardsDialog(stars = stars, onRedeem = viewModel::onRedeemReward, onDismiss = viewModel::onCloseRewards)
+    }
+
+    if (showProviderMode) {
+        ProviderModeScreen(onClose = { showProviderMode = false })
+        return
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -75,6 +85,7 @@ fun BloomLensRoot(viewModel: MainViewModel) {
                     state = current,
                     viewModel = viewModel,
                     onOpenHistory = viewModel::onOpenHistory,
+                    onOpenProviderMode = { showProviderMode = true },
                     stars = stars,
                     onOpenRewards = viewModel::onOpenRewards,
                 )

@@ -84,6 +84,7 @@ dependencies {
     implementation(libs.mlkit.text.recognition)
     implementation(libs.qualcomm.geniex.android)
     implementation(libs.okhttp)
+    implementation(libs.nanohttpd)
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)

@@ -19,6 +19,8 @@ data class SessionRecord(
     val imagePath: String? = null,
     /** Whether the tutor recognized [problemText] as an actual problem, vs. an unrelated photo. */
     val recognized: Boolean = true,
+    /** Set when this session came from a remote student via Provider Mode's web server. */
+    val studentName: String? = null,
     val messages: List<StoredChatEntry>,
     val isComplete: Boolean,
 )

@@ -9,9 +9,20 @@ import com.geniex.sdk.bean.ModelConfig
 import com.geniex.sdk.bean.ModelPaths
 import com.geniex.sdk.bean.RuntimeIdValue
 import com.geniex.sdk.bean.SamplerConfig
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
-/** Sole [OnDeviceLlm] implementation, wrapping Qualcomm GenieX's [LlmWrapper]. */
+/**
+ * Sole [OnDeviceLlm] implementation, wrapping Qualcomm GenieX's [LlmWrapper].
+ *
+ * The underlying NPU handle is a single session - concurrent generate calls corrupt its
+ * KV-cache (see the `reset()` note in [generateRaw]). [mutex] serializes every call so this is
+ * safe to share between the native UI and Provider Mode's web server, which may otherwise call
+ * in from different threads at the same time.
+ */
 class GenieOnDeviceLlm : OnDeviceLlm {
+
+    private val mutex = Mutex()
 
     @Volatile
     private var llmWrapper: LlmWrapper? = null
@@ -51,8 +62,8 @@ class GenieOnDeviceLlm : OnDeviceLlm {
     override suspend fun generateFlashcards(prompt: String): Result<List<Flashcard>> =
         generateRaw(prompt, useGrammar = false).mapCatching { FlashcardResponseParser.parse(it).getOrThrow() }
 
-    private suspend fun generateRaw(prompt: String, useGrammar: Boolean): Result<String> {
-        val wrapper = llmWrapper ?: return Result.failure(IllegalStateException("LLM not initialized"))
+    private suspend fun generateRaw(prompt: String, useGrammar: Boolean): Result<String> = mutex.withLock {
+        val wrapper = llmWrapper ?: return@withLock Result.failure(IllegalStateException("LLM not initialized"))
 
         // Clear any session/KV-cache state left over from a previous turn - without this, a
         // second generation on the same handle behaves inconsistently (stale context bleeding
@@ -80,9 +91,9 @@ class GenieOnDeviceLlm : OnDeviceLlm {
                 is LlmStreamResult.Error -> streamError = result.throwable
             }
         }
-        streamError?.let { return Result.failure(it) }
+        streamError?.let { return@withLock Result.failure(it) }
 
-        return Result.success(builder.toString())
+        Result.success(builder.toString())
     }
 
     override fun isReady(): Boolean = llmWrapper != null
