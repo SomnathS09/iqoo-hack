@@ -1,0 +1,1 @@
+https://aihub.qualcomm.com/mobile/models?chipsets=qualcomm-snapdragon-8-elite
