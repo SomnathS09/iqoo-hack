@@ -11,21 +11,25 @@ import hack.pune.iqoo.bloomlens.llm.PromptBuilder
 import hack.pune.iqoo.bloomlens.llm.TutorTurn
 import hack.pune.iqoo.bloomlens.model.GenieModelRepository
 import hack.pune.iqoo.bloomlens.model.HistoryRepository
+import hack.pune.iqoo.bloomlens.model.ImageStorage
 import hack.pune.iqoo.bloomlens.model.ModelPullEvent
 import hack.pune.iqoo.bloomlens.model.PersonaRepository
 import hack.pune.iqoo.bloomlens.model.SessionRecord
 import hack.pune.iqoo.bloomlens.model.StoredChatEntry
 import hack.pune.iqoo.bloomlens.model.UserPersona
 import hack.pune.iqoo.bloomlens.ocr.TextRecognizer
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainViewModel(
     private val personaRepository: PersonaRepository,
     private val modelRepository: GenieModelRepository,
     private val historyRepository: HistoryRepository,
+    private val imageStorage: ImageStorage,
     private val textRecognizer: TextRecognizer,
     private val llm: OnDeviceLlm,
 ) : ViewModel() {
@@ -48,6 +52,9 @@ class MainViewModel(
 
     /** Stable id for the in-progress session, so history updates overwrite rather than duplicate. */
     private var currentSessionId: String? = null
+
+    /** Path to the current problem photo, persisted to disk so history survives app restarts. */
+    private var currentImagePath: String? = null
 
     init {
         val existing = personaRepository.getPersona()
@@ -112,7 +119,9 @@ class MainViewModel(
                 .onSuccess { turn ->
                     val level = BloomLevel.fromLabel(turn.bloomLevel) ?: BloomLevel.REMEMBER
                     val opening = ChatEntry(fromTutor = true, text = turn.message, bloomLevel = level.takeIf { turn.recognized })
-                    currentSessionId = System.currentTimeMillis().toString()
+                    val sessionId = System.currentTimeMillis().toString()
+                    currentSessionId = sessionId
+                    currentImagePath = withContext(Dispatchers.IO) { imageStorage.save(bitmap, sessionId) }
                     _state.value = AppScreenState.Tutoring(
                         frame = bitmap,
                         session = TutorSession(
@@ -220,6 +229,7 @@ class MainViewModel(
                 timestamp = id.toLongOrNull() ?: System.currentTimeMillis(),
                 problemText = tutoring.session.problemText,
                 sessionGoal = sessionGoal,
+                imagePath = currentImagePath,
                 messages = tutoring.session.messages.map {
                     StoredChatEntry(
                         fromTutor = it.fromTutor,
@@ -251,6 +261,7 @@ class MainViewModel(
     fun onNewProblem() {
         sessionGoal = null
         currentSessionId = null
+        currentImagePath = null
         _state.value = AppScreenState.Capturing
     }
 

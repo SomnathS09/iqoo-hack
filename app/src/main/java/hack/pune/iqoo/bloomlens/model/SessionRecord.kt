@@ -16,6 +16,7 @@ data class SessionRecord(
     val timestamp: Long,
     val problemText: String,
     val sessionGoal: String? = null,
+    val imagePath: String? = null,
     val messages: List<StoredChatEntry>,
     val isComplete: Boolean,
 )

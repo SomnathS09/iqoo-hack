@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,6 +50,7 @@ import androidx.core.content.ContextCompat
 import hack.pune.iqoo.bloomlens.state.ChatEntry
 import hack.pune.iqoo.bloomlens.state.FlashcardsUiState
 import hack.pune.iqoo.bloomlens.state.TutorSession
+import hack.pune.iqoo.bloomlens.ui.common.FullScreenImageViewer
 import hack.pune.iqoo.bloomlens.ui.theme.HintGreen
 import hack.pune.iqoo.bloomlens.ui.theme.HintPurple
 import hack.pune.iqoo.bloomlens.voice.SpeechRecognizerManager
@@ -134,6 +136,11 @@ fun TutorScreen(
         FlashcardsDialog(state = flashcardsState, onDismiss = onDismissFlashcards)
     }
 
+    var showFullImage by remember { mutableStateOf(false) }
+    if (showFullImage && frame != null) {
+        FullScreenImageViewer(bitmap = frame, onDismiss = { showFullImage = false })
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -142,10 +149,11 @@ fun TutorScreen(
         frame?.let {
             Image(
                 bitmap = it.asImageBitmap(),
-                contentDescription = null,
+                contentDescription = "Tap to view full photo",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp),
+                    .height(100.dp)
+                    .clickable { showFullImage = true },
                 contentScale = ContentScale.Crop,
             )
         }
