@@ -71,6 +71,8 @@ fun TutorScreen(
     onDismissFlashcards: () -> Unit,
     onOpenHistory: () -> Unit,
     onNewProblem: () -> Unit,
+    stars: Int,
+    onOpenRewards: () -> Unit,
 ) {
     val context = LocalContext.current
     var input by remember { mutableStateOf("") }
@@ -158,6 +160,8 @@ fun TutorScreen(
             )
         }
 
+        BloomProgressBar(currentLevel = session.currentLevel, isComplete = session.isComplete)
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -171,8 +175,11 @@ fun TutorScreen(
                     Text("📇 Flashcards")
                 }
             }
-            IconButton(onClick = { speechEnabled = !speechEnabled }) {
-                Text(if (speechEnabled) "🔊" else "🔇")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onOpenRewards) { Text("⭐ $stars") }
+                IconButton(onClick = { speechEnabled = !speechEnabled }) {
+                    Text(if (speechEnabled) "🔊" else "🔇")
+                }
             }
         }
 

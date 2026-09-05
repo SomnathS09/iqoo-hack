@@ -14,6 +14,8 @@ import hack.pune.iqoo.bloomlens.model.HistoryRepository
 import hack.pune.iqoo.bloomlens.model.ImageStorage
 import hack.pune.iqoo.bloomlens.model.ModelPullEvent
 import hack.pune.iqoo.bloomlens.model.PersonaRepository
+import hack.pune.iqoo.bloomlens.model.Reward
+import hack.pune.iqoo.bloomlens.model.RewardsRepository
 import hack.pune.iqoo.bloomlens.model.SessionRecord
 import hack.pune.iqoo.bloomlens.model.StoredChatEntry
 import hack.pune.iqoo.bloomlens.model.UserPersona
@@ -32,6 +34,7 @@ class MainViewModel(
     private val imageStorage: ImageStorage,
     private val textRecognizer: TextRecognizer,
     private val llm: OnDeviceLlm,
+    private val rewardsRepository: RewardsRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<AppScreenState>(AppScreenState.Onboarding)
@@ -44,6 +47,13 @@ class MainViewModel(
     /** Study log overlay - independent of [state], shown on top of whatever screen is active. */
     private val _historyView = MutableStateFlow<HistoryViewState?>(null)
     val historyView: StateFlow<HistoryViewState?> = _historyView.asStateFlow()
+
+    /** Stars earned by completing a full Bloom's Taxonomy journey - redeemable for rewards. */
+    private val _stars = MutableStateFlow(rewardsRepository.getStars())
+    val stars: StateFlow<Int> = _stars.asStateFlow()
+
+    private val _showRewards = MutableStateFlow(false)
+    val showRewards: StateFlow<Boolean> = _showRewards.asStateFlow()
 
     private var persona: UserPersona? = null
 
@@ -202,6 +212,20 @@ class MainViewModel(
         _historyView.value = null
     }
 
+    fun onOpenRewards() {
+        _showRewards.value = true
+    }
+
+    fun onCloseRewards() {
+        _showRewards.value = false
+    }
+
+    fun onRedeemReward(reward: Reward) {
+        if (rewardsRepository.redeem(reward)) {
+            _stars.value = rewardsRepository.getStars()
+        }
+    }
+
     /** Resumes a past session (finished or in-progress) as the live tutor chat. */
     fun onContinueSession(session: SessionRecord) {
         viewModelScope.launch {
@@ -240,6 +264,7 @@ class MainViewModel(
         val level = BloomLevel.fromLabel(turn.bloomLevel) ?: latest.session.currentLevel
         val reply = listOfNotNull(turn.feedback.takeIf { it.isNotBlank() }, turn.message.takeIf { it.isNotBlank() })
             .joinToString("\n\n")
+        val justCompleted = !latest.session.isComplete && turn.isComplete
         _state.value = latest.copy(
             session = latest.session.copy(
                 messages = latest.session.messages + ChatEntry(
@@ -254,6 +279,13 @@ class MainViewModel(
             sending = false,
         )
         persistCurrentSession()
+        if (justCompleted) {
+            currentSessionId?.let { id ->
+                if (rewardsRepository.awardStarForSession(id)) {
+                    _stars.value = rewardsRepository.getStars()
+                }
+            }
+        }
     }
 
     private fun persistCurrentSession() {

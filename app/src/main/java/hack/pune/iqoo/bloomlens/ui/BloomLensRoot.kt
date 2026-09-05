@@ -14,6 +14,7 @@ import hack.pune.iqoo.bloomlens.ui.download.DownloadScreen
 import hack.pune.iqoo.bloomlens.ui.history.HistoryDetailScreen
 import hack.pune.iqoo.bloomlens.ui.history.HistoryListScreen
 import hack.pune.iqoo.bloomlens.ui.onboarding.OnboardingScreen
+import hack.pune.iqoo.bloomlens.ui.rewards.RewardsDialog
 import hack.pune.iqoo.bloomlens.ui.tutor.TutorScreen
 
 @Composable
@@ -21,6 +22,12 @@ fun BloomLensRoot(viewModel: MainViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val flashcards by viewModel.flashcards.collectAsStateWithLifecycle()
     val historyView by viewModel.historyView.collectAsStateWithLifecycle()
+    val stars by viewModel.stars.collectAsStateWithLifecycle()
+    val showRewards by viewModel.showRewards.collectAsStateWithLifecycle()
+
+    if (showRewards) {
+        RewardsDialog(stars = stars, onRedeem = viewModel::onRedeemReward, onDismiss = viewModel::onCloseRewards)
+    }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         when (val history = historyView) {
@@ -64,7 +71,13 @@ fun BloomLensRoot(viewModel: MainViewModel) {
                 AppScreenState.Capturing,
                 AppScreenState.ProcessingFrame,
                 is AppScreenState.ProcessingFailed,
-                -> CaptureScreen(state = current, viewModel = viewModel, onOpenHistory = viewModel::onOpenHistory)
+                -> CaptureScreen(
+                    state = current,
+                    viewModel = viewModel,
+                    onOpenHistory = viewModel::onOpenHistory,
+                    stars = stars,
+                    onOpenRewards = viewModel::onOpenRewards,
+                )
 
                 is AppScreenState.Tutoring -> TutorScreen(
                     frame = current.frame,
@@ -76,6 +89,8 @@ fun BloomLensRoot(viewModel: MainViewModel) {
                     onDismissFlashcards = viewModel::onDismissFlashcards,
                     onOpenHistory = viewModel::onOpenHistory,
                     onNewProblem = viewModel::onNewProblem,
+                    stars = stars,
+                    onOpenRewards = viewModel::onOpenRewards,
                 )
             }
         }

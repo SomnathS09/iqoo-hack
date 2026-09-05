@@ -44,7 +44,13 @@ import hack.pune.iqoo.bloomlens.state.MainViewModel
 import kotlinx.coroutines.launch
 
 @Composable
-fun CaptureScreen(state: AppScreenState, viewModel: MainViewModel, onOpenHistory: () -> Unit) {
+fun CaptureScreen(
+    state: AppScreenState,
+    viewModel: MainViewModel,
+    onOpenHistory: () -> Unit,
+    stars: Int,
+    onOpenRewards: () -> Unit,
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
@@ -146,6 +152,16 @@ fun CaptureScreen(state: AppScreenState, viewModel: MainViewModel, onOpenHistory
                     .padding(4.dp),
             ) {
                 Text("📜")
+            }
+
+            TextButton(
+                onClick = onOpenRewards,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(4.dp),
+            ) {
+                Text("⭐ $stars")
             }
         } else {
             Column(

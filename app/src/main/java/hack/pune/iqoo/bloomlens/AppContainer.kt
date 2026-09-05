@@ -9,6 +9,7 @@ import hack.pune.iqoo.bloomlens.model.GenieModelRepository
 import hack.pune.iqoo.bloomlens.model.HistoryRepository
 import hack.pune.iqoo.bloomlens.model.ImageStorage
 import hack.pune.iqoo.bloomlens.model.PersonaRepository
+import hack.pune.iqoo.bloomlens.model.RewardsRepository
 import hack.pune.iqoo.bloomlens.ocr.TextRecognizer
 import hack.pune.iqoo.bloomlens.state.MainViewModel
 
@@ -21,11 +22,20 @@ class AppContainer(context: Context) {
     private val imageStorage = ImageStorage(appContext)
     private val textRecognizer = TextRecognizer()
     private val onDeviceLlm = GenieOnDeviceLlm()
+    private val rewardsRepository = RewardsRepository(appContext)
 
     val viewModelFactory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-            return MainViewModel(personaRepository, modelRepository, historyRepository, imageStorage, textRecognizer, onDeviceLlm) as T
+            return MainViewModel(
+                personaRepository,
+                modelRepository,
+                historyRepository,
+                imageStorage,
+                textRecognizer,
+                onDeviceLlm,
+                rewardsRepository,
+            ) as T
         }
     }
 }
