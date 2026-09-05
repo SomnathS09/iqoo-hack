@@ -10,12 +10,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -65,6 +69,42 @@ fun CaptureScreen(state: AppScreenState, viewModel: MainViewModel) {
     val cameraController = remember { CameraController(context) }
     DisposableEffect(Unit) {
         onDispose { cameraController.unbind() }
+    }
+
+    // SRL "Forethought": ask for a quick session goal once per new problem. CaptureScreen is
+    // recreated each time we return here from Tutoring, so this naturally re-prompts per problem.
+    var showGoalDialog by remember { mutableStateOf(true) }
+    var goalInput by remember { mutableStateOf("") }
+    if (showGoalDialog && state == AppScreenState.Capturing) {
+        AlertDialog(
+            onDismissRequest = { showGoalDialog = false },
+            title = { Text("What's your goal?") },
+            text = {
+                Column {
+                    Text(
+                        "Setting a quick goal helps you stay focused (optional).",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    OutlinedTextField(
+                        value = goalInput,
+                        onValueChange = { goalInput = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        placeholder = { Text("e.g. Fully understand this problem") },
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.onSessionGoalSet(goalInput)
+                    showGoalDialog = false
+                }) { Text("Start") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showGoalDialog = false }) { Text("Skip") }
+            },
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

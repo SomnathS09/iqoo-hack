@@ -16,6 +16,7 @@ import hack.pune.iqoo.bloomlens.ui.tutor.TutorScreen
 @Composable
 fun BloomLensRoot(viewModel: MainViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val flashcards by viewModel.flashcards.collectAsStateWithLifecycle()
 
     Surface(modifier = Modifier.fillMaxSize()) {
         when (val current = state) {
@@ -52,7 +53,10 @@ fun BloomLensRoot(viewModel: MainViewModel) {
                 frame = current.frame,
                 session = current.session,
                 sending = current.sending,
+                flashcardsState = flashcards,
                 onSendReply = viewModel::onSendReply,
+                onRequestFlashcards = viewModel::onRequestFlashcards,
+                onDismissFlashcards = viewModel::onDismissFlashcards,
                 onNewProblem = viewModel::onNewProblem,
             )
         }

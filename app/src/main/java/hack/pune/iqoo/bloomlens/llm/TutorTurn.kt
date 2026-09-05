@@ -9,4 +9,6 @@ data class TutorTurn(
     val feedback: String,
     val message: String,
     val isComplete: Boolean,
+    /** DOK-4 "Devil's Advocate": this message deliberately states something subtly wrong. */
+    val isDevilsAdvocate: Boolean = false,
 )

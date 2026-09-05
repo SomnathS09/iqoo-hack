@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.geniex.sdk.bean.ModelPaths
 import hack.pune.iqoo.bloomlens.llm.BloomLevel
+import hack.pune.iqoo.bloomlens.llm.Flashcard
 import hack.pune.iqoo.bloomlens.llm.OnDeviceLlm
 import hack.pune.iqoo.bloomlens.llm.PromptBuilder
 import hack.pune.iqoo.bloomlens.llm.TutorTurn
@@ -28,7 +29,14 @@ class MainViewModel(
     private val _state = MutableStateFlow<AppScreenState>(AppScreenState.Onboarding)
     val state: StateFlow<AppScreenState> = _state.asStateFlow()
 
+    /** DOK-1 flashcards, shown as a dialog over the current screen when non-null. */
+    private val _flashcards = MutableStateFlow<FlashcardsUiState?>(null)
+    val flashcards: StateFlow<FlashcardsUiState?> = _flashcards.asStateFlow()
+
     private var persona: UserPersona? = null
+
+    /** SRL "Forethought": the learner's stated goal for the current problem, if any. */
+    private var sessionGoal: String? = null
 
     init {
         val existing = personaRepository.getPersona()
@@ -73,6 +81,11 @@ class MainViewModel(
         _state.value = if (granted) AppScreenState.Capturing else AppScreenState.CameraPermissionRequired
     }
 
+    /** SRL "Forethought": called once per new problem, before capture, from the goal-setting prompt. */
+    fun onSessionGoalSet(goal: String) {
+        sessionGoal = goal.trim().takeIf { it.isNotBlank() }
+    }
+
     fun onShutterPressed(bitmap: Bitmap) {
         val currentPersona = persona ?: return
         _state.value = AppScreenState.ProcessingFrame
@@ -83,7 +96,7 @@ class MainViewModel(
                 return@launch
             }
 
-            val prompt = PromptBuilder.buildFirstTurnPrompt(ocrResult.rawText, currentPersona)
+            val prompt = PromptBuilder.buildFirstTurnPrompt(ocrResult.rawText, currentPersona, sessionGoal)
             llm.generateTutorTurn(prompt)
                 .onSuccess { turn ->
                     val level = BloomLevel.fromLabel(turn.bloomLevel) ?: BloomLevel.REMEMBER
@@ -130,6 +143,23 @@ class MainViewModel(
         }
     }
 
+    /** DOK-1: generates quick recall flashcards from the current problem, shown as a dialog. */
+    fun onRequestFlashcards() {
+        val problemText = (_state.value as? AppScreenState.Tutoring)?.session?.problemText ?: return
+        _flashcards.value = FlashcardsUiState(cards = emptyList(), loading = true, error = null)
+        viewModelScope.launch {
+            llm.generateFlashcards(PromptBuilder.buildFlashcardsPrompt(problemText))
+                .onSuccess { cards -> _flashcards.value = FlashcardsUiState(cards = cards, loading = false, error = null) }
+                .onFailure {
+                    _flashcards.value = FlashcardsUiState(cards = emptyList(), loading = false, error = "Couldn't generate flashcards - try again.")
+                }
+        }
+    }
+
+    fun onDismissFlashcards() {
+        _flashcards.value = null
+    }
+
     private fun applyTutorTurn(turn: TutorTurn) {
         val latest = _state.value
         if (latest !is AppScreenState.Tutoring) return
@@ -138,7 +168,12 @@ class MainViewModel(
             .joinToString("\n\n")
         _state.value = latest.copy(
             session = latest.session.copy(
-                messages = latest.session.messages + ChatEntry(fromTutor = true, text = reply, bloomLevel = level),
+                messages = latest.session.messages + ChatEntry(
+                    fromTutor = true,
+                    text = reply,
+                    bloomLevel = level,
+                    isDevilsAdvocate = turn.isDevilsAdvocate,
+                ),
                 currentLevel = level,
                 isComplete = turn.isComplete,
             ),
@@ -162,6 +197,7 @@ class MainViewModel(
     }
 
     fun onNewProblem() {
+        sessionGoal = null
         _state.value = AppScreenState.Capturing
     }
 
@@ -170,3 +206,9 @@ class MainViewModel(
         super.onCleared()
     }
 }
+
+data class FlashcardsUiState(
+    val cards: List<Flashcard>,
+    val loading: Boolean,
+    val error: String?,
+)

@@ -45,7 +45,13 @@ class GenieOnDeviceLlm : OnDeviceLlm {
             .map { }
     }
 
-    override suspend fun generateTutorTurn(prompt: String): Result<TutorTurn> {
+    override suspend fun generateTutorTurn(prompt: String): Result<TutorTurn> =
+        generateRaw(prompt, useGrammar = true).mapCatching { TutorResponseParser.parse(it).getOrThrow() }
+
+    override suspend fun generateFlashcards(prompt: String): Result<List<Flashcard>> =
+        generateRaw(prompt, useGrammar = false).mapCatching { FlashcardResponseParser.parse(it).getOrThrow() }
+
+    private suspend fun generateRaw(prompt: String, useGrammar: Boolean): Result<String> {
         val wrapper = llmWrapper ?: return Result.failure(IllegalStateException("LLM not initialized"))
 
         // Clear any session/KV-cache state left over from a previous turn - without this, a
@@ -55,9 +61,10 @@ class GenieOnDeviceLlm : OnDeviceLlm {
 
         // The qairt/NPU plugin rejects sampler features beyond basic temperature/top-p (it also
         // rejects a custom n_ctx and a real chat-message array - see initialize() and
-        // PromptBuilder). Grammar-constrained decoding is no exception. TutorResponseParser's
-        // regex fallback is the safety net for qairt; llama_cpp gets the stricter grammar.
-        val samplerConfig = if (isQairt) {
+        // PromptBuilder). Grammar-constrained decoding is no exception. TutorResponseParser's /
+        // FlashcardResponseParser's regex fallback is the safety net for qairt; llama_cpp gets
+        // the stricter grammar.
+        val samplerConfig = if (isQairt || !useGrammar) {
             SamplerConfig(temperature = 0.2f, topP = 0.9f)
         } else {
             SamplerConfig(temperature = 0.2f, topP = 0.9f, grammarString = TutorGrammar.GBNF)
@@ -75,7 +82,7 @@ class GenieOnDeviceLlm : OnDeviceLlm {
         }
         streamError?.let { return Result.failure(it) }
 
-        return TutorResponseParser.parse(builder.toString())
+        return Result.success(builder.toString())
     }
 
     override fun isReady(): Boolean = llmWrapper != null

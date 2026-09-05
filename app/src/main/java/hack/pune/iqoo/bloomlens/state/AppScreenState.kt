@@ -7,6 +7,7 @@ data class ChatEntry(
     val fromTutor: Boolean,
     val text: String,
     val bloomLevel: BloomLevel? = null,
+    val isDevilsAdvocate: Boolean = false,
 )
 
 data class TutorSession(
