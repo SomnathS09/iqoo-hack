@@ -16,6 +16,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -42,7 +43,7 @@ import hack.pune.iqoo.bloomlens.state.MainViewModel
 import kotlinx.coroutines.launch
 
 @Composable
-fun CaptureScreen(state: AppScreenState, viewModel: MainViewModel) {
+fun CaptureScreen(state: AppScreenState, viewModel: MainViewModel, onOpenHistory: () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
@@ -134,6 +135,13 @@ fun CaptureScreen(state: AppScreenState, viewModel: MainViewModel) {
                 ) {
                     Text("●")
                 }
+            }
+
+            IconButton(
+                onClick = onOpenHistory,
+                modifier = Modifier.align(Alignment.TopStart),
+            ) {
+                Text("📜")
             }
         } else {
             Column(

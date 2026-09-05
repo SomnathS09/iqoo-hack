@@ -67,6 +67,7 @@ fun TutorScreen(
     onSendReply: (String) -> Unit,
     onRequestFlashcards: () -> Unit,
     onDismissFlashcards: () -> Unit,
+    onOpenHistory: () -> Unit,
     onNewProblem: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -156,8 +157,11 @@ fun TutorScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = onRequestFlashcards, enabled = !sending) {
-                Text("📇 Flashcards")
+            Row {
+                IconButton(onClick = onOpenHistory) { Text("📜") }
+                TextButton(onClick = onRequestFlashcards, enabled = !sending) {
+                    Text("📇 Flashcards")
+                }
             }
             IconButton(onClick = { speechEnabled = !speechEnabled }) {
                 Text(if (speechEnabled) "🔊" else "🔇")

@@ -10,8 +10,11 @@ import hack.pune.iqoo.bloomlens.llm.OnDeviceLlm
 import hack.pune.iqoo.bloomlens.llm.PromptBuilder
 import hack.pune.iqoo.bloomlens.llm.TutorTurn
 import hack.pune.iqoo.bloomlens.model.GenieModelRepository
+import hack.pune.iqoo.bloomlens.model.HistoryRepository
 import hack.pune.iqoo.bloomlens.model.ModelPullEvent
 import hack.pune.iqoo.bloomlens.model.PersonaRepository
+import hack.pune.iqoo.bloomlens.model.SessionRecord
+import hack.pune.iqoo.bloomlens.model.StoredChatEntry
 import hack.pune.iqoo.bloomlens.model.UserPersona
 import hack.pune.iqoo.bloomlens.ocr.TextRecognizer
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +25,7 @@ import kotlinx.coroutines.launch
 class MainViewModel(
     private val personaRepository: PersonaRepository,
     private val modelRepository: GenieModelRepository,
+    private val historyRepository: HistoryRepository,
     private val textRecognizer: TextRecognizer,
     private val llm: OnDeviceLlm,
 ) : ViewModel() {
@@ -33,10 +37,17 @@ class MainViewModel(
     private val _flashcards = MutableStateFlow<FlashcardsUiState?>(null)
     val flashcards: StateFlow<FlashcardsUiState?> = _flashcards.asStateFlow()
 
+    /** Study log overlay - independent of [state], shown on top of whatever screen is active. */
+    private val _historyView = MutableStateFlow<HistoryViewState?>(null)
+    val historyView: StateFlow<HistoryViewState?> = _historyView.asStateFlow()
+
     private var persona: UserPersona? = null
 
     /** SRL "Forethought": the learner's stated goal for the current problem, if any. */
     private var sessionGoal: String? = null
+
+    /** Stable id for the in-progress session, so history updates overwrite rather than duplicate. */
+    private var currentSessionId: String? = null
 
     init {
         val existing = personaRepository.getPersona()
@@ -101,6 +112,7 @@ class MainViewModel(
                 .onSuccess { turn ->
                     val level = BloomLevel.fromLabel(turn.bloomLevel) ?: BloomLevel.REMEMBER
                     val opening = ChatEntry(fromTutor = true, text = turn.message, bloomLevel = level.takeIf { turn.recognized })
+                    currentSessionId = System.currentTimeMillis().toString()
                     _state.value = AppScreenState.Tutoring(
                         frame = bitmap,
                         session = TutorSession(
@@ -111,6 +123,7 @@ class MainViewModel(
                         ),
                         sending = false,
                     )
+                    persistCurrentSession()
                 }
                 .onFailure {
                     _state.value = AppScreenState.ProcessingFailed(it.message ?: "Could not understand the model's answer")
@@ -160,6 +173,22 @@ class MainViewModel(
         _flashcards.value = null
     }
 
+    fun onOpenHistory() {
+        _historyView.value = HistoryViewState.ListView(historyRepository.getAllSessions())
+    }
+
+    fun onSelectHistorySession(session: SessionRecord) {
+        _historyView.value = HistoryViewState.DetailView(session)
+    }
+
+    fun onBackFromHistoryDetail() {
+        _historyView.value = HistoryViewState.ListView(historyRepository.getAllSessions())
+    }
+
+    fun onCloseHistory() {
+        _historyView.value = null
+    }
+
     private fun applyTutorTurn(turn: TutorTurn) {
         val latest = _state.value
         if (latest !is AppScreenState.Tutoring) return
@@ -178,6 +207,29 @@ class MainViewModel(
                 isComplete = turn.isComplete,
             ),
             sending = false,
+        )
+        persistCurrentSession()
+    }
+
+    private fun persistCurrentSession() {
+        val id = currentSessionId ?: return
+        val tutoring = _state.value as? AppScreenState.Tutoring ?: return
+        historyRepository.saveSession(
+            SessionRecord(
+                id = id,
+                timestamp = id.toLongOrNull() ?: System.currentTimeMillis(),
+                problemText = tutoring.session.problemText,
+                sessionGoal = sessionGoal,
+                messages = tutoring.session.messages.map {
+                    StoredChatEntry(
+                        fromTutor = it.fromTutor,
+                        text = it.text,
+                        bloomLevel = it.bloomLevel?.label,
+                        isDevilsAdvocate = it.isDevilsAdvocate,
+                    )
+                },
+                isComplete = tutoring.session.isComplete,
+            ),
         )
     }
 
@@ -198,6 +250,7 @@ class MainViewModel(
 
     fun onNewProblem() {
         sessionGoal = null
+        currentSessionId = null
         _state.value = AppScreenState.Capturing
     }
 
