@@ -1,7 +1,9 @@
 package hack.pune.iqoo.bloomlens.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,75 +49,80 @@ fun BloomLensRoot(viewModel: MainViewModel) {
     }
     BackHandler(enabled = showProviderMode) { showProviderMode = false }
 
-    if (showProviderMode) {
-        ProviderModeScreen(onClose = { showProviderMode = false })
-        return
-    }
+    // Applied once here rather than per-screen: on Android 15+ (and this app's edge-to-edge
+    // layout generally) content draws behind the system navigation bar by default, so
+    // bottom-anchored controls (the shutter FAB, send button, etc.) end up under/behind it
+    // without this.
+    Box(modifier = Modifier.fillMaxSize().navigationBarsPadding()) {
+        if (showProviderMode) {
+            ProviderModeScreen(onClose = { showProviderMode = false })
+        } else {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                when (val history = historyView) {
+                    is HistoryViewState.ListView -> HistoryListScreen(
+                        sessions = history.sessions,
+                        onSelect = viewModel::onSelectHistorySession,
+                        onClose = viewModel::onCloseHistory,
+                    )
 
-    Surface(modifier = Modifier.fillMaxSize()) {
-        when (val history = historyView) {
-            is HistoryViewState.ListView -> HistoryListScreen(
-                sessions = history.sessions,
-                onSelect = viewModel::onSelectHistorySession,
-                onClose = viewModel::onCloseHistory,
-            )
+                    is HistoryViewState.DetailView -> HistoryDetailScreen(
+                        session = history.session,
+                        onBack = viewModel::onBackFromHistoryDetail,
+                        onContinue = viewModel::onContinueSession,
+                    )
 
-            is HistoryViewState.DetailView -> HistoryDetailScreen(
-                session = history.session,
-                onBack = viewModel::onBackFromHistoryDetail,
-                onContinue = viewModel::onContinueSession,
-            )
+                    null -> when (val current = state) {
+                        AppScreenState.Onboarding -> OnboardingScreen(onComplete = viewModel::onOnboardingComplete)
 
-            null -> when (val current = state) {
-                AppScreenState.Onboarding -> OnboardingScreen(onComplete = viewModel::onOnboardingComplete)
+                        AppScreenState.CheckingModel -> DownloadScreen(
+                            downloadedBytes = 0L,
+                            totalBytes = 0L,
+                            message = "Checking for the on-device model…",
+                            onRetry = null,
+                        )
 
-                AppScreenState.CheckingModel -> DownloadScreen(
-                    downloadedBytes = 0L,
-                    totalBytes = 0L,
-                    message = "Checking for the on-device model…",
-                    onRetry = null,
-                )
+                        is AppScreenState.Downloading -> DownloadScreen(
+                            downloadedBytes = current.downloadedBytes,
+                            totalBytes = current.totalBytes,
+                            message = if (current.fileName.isBlank()) "Downloading model…" else "Downloading ${current.fileName}…",
+                            onRetry = null,
+                        )
 
-                is AppScreenState.Downloading -> DownloadScreen(
-                    downloadedBytes = current.downloadedBytes,
-                    totalBytes = current.totalBytes,
-                    message = if (current.fileName.isBlank()) "Downloading model…" else "Downloading ${current.fileName}…",
-                    onRetry = null,
-                )
+                        is AppScreenState.DownloadFailed -> DownloadScreen(
+                            downloadedBytes = 0L,
+                            totalBytes = 0L,
+                            message = current.message,
+                            onRetry = viewModel::onRetryDownload,
+                        )
 
-                is AppScreenState.DownloadFailed -> DownloadScreen(
-                    downloadedBytes = 0L,
-                    totalBytes = 0L,
-                    message = current.message,
-                    onRetry = viewModel::onRetryDownload,
-                )
+                        AppScreenState.CameraPermissionRequired,
+                        AppScreenState.Capturing,
+                        AppScreenState.ProcessingFrame,
+                        is AppScreenState.ProcessingFailed,
+                        -> CaptureScreen(
+                            state = current,
+                            viewModel = viewModel,
+                            onOpenHistory = viewModel::onOpenHistory,
+                            onOpenProviderMode = { showProviderMode = true },
+                            stars = stars,
+                            onOpenRewards = viewModel::onOpenRewards,
+                        )
 
-                AppScreenState.CameraPermissionRequired,
-                AppScreenState.Capturing,
-                AppScreenState.ProcessingFrame,
-                is AppScreenState.ProcessingFailed,
-                -> CaptureScreen(
-                    state = current,
-                    viewModel = viewModel,
-                    onOpenHistory = viewModel::onOpenHistory,
-                    onOpenProviderMode = { showProviderMode = true },
-                    stars = stars,
-                    onOpenRewards = viewModel::onOpenRewards,
-                )
-
-                is AppScreenState.Tutoring -> TutorScreen(
-                    frame = current.frame,
-                    session = current.session,
-                    sending = current.sending,
-                    flashcardsState = flashcards,
-                    onSendReply = viewModel::onSendReply,
-                    onRequestFlashcards = viewModel::onRequestFlashcards,
-                    onDismissFlashcards = viewModel::onDismissFlashcards,
-                    onOpenHistory = viewModel::onOpenHistory,
-                    onNewProblem = viewModel::onNewProblem,
-                    stars = stars,
-                    onOpenRewards = viewModel::onOpenRewards,
-                )
+                        is AppScreenState.Tutoring -> TutorScreen(
+                            frame = current.frame,
+                            session = current.session,
+                            sending = current.sending,
+                            flashcardsState = flashcards,
+                            onSendReply = viewModel::onSendReply,
+                            onRequestFlashcards = viewModel::onRequestFlashcards,
+                            onDismissFlashcards = viewModel::onDismissFlashcards,
+                            onOpenHistory = viewModel::onOpenHistory,
+                            onNewProblem = viewModel::onNewProblem,
+                            stars = stars,
+                            onOpenRewards = viewModel::onOpenRewards,
+                        )
+                    }
+                }
             }
         }
     }
