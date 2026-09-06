@@ -131,7 +131,7 @@ class MainViewModel(
             llm.generateTutorTurn(prompt)
                 .onSuccess { turn ->
                     val level = BloomLevel.fromLabel(turn.bloomLevel) ?: BloomLevel.REMEMBER
-                    val opening = ChatEntry(fromTutor = true, text = turn.message, bloomLevel = level.takeIf { turn.recognized })
+                    val opening = ChatEntry(fromTutor = true, text = turn.displayMessage, bloomLevel = level.takeIf { turn.recognized })
                     val sessionId = System.currentTimeMillis().toString()
                     currentSessionId = sessionId
                     currentImagePath = withContext(Dispatchers.IO) { imageStorage.save(bitmap, sessionId) }

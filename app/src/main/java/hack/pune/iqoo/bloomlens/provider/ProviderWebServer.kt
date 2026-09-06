@@ -103,7 +103,7 @@ class ProviderWebServer(
                         )
                         webSession.imagePath = bitmap?.let { imageStorage.save(it, "web_$id") }
                         webSession.messages.add(
-                            ChatEntry(fromTutor = true, text = turn.message, bloomLevel = level.takeIf { turn.recognized }),
+                            ChatEntry(fromTutor = true, text = turn.displayMessage, bloomLevel = level.takeIf { turn.recognized }),
                         )
                         webSession.currentLevel = level
                         webSession.isComplete = turn.isComplete
