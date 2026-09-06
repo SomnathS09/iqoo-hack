@@ -135,6 +135,8 @@ class ProviderWebServer(
                     currentLevel = webSession.currentLevel,
                     previousQuestion = previousQuestion,
                     userAnswer = answer,
+                    forceAdvance = webSession.turnsAtCurrentLevel >= PromptBuilder.FORCE_ADVANCE_AFTER_TURNS &&
+                        webSession.currentLevel != BloomLevel.CREATE,
                 )
                 llm.generateTutorTurn(prompt).fold(
                     onSuccess = { turn ->
@@ -144,6 +146,7 @@ class ProviderWebServer(
                         webSession.messages.add(
                             ChatEntry(fromTutor = true, text = reply, bloomLevel = level, isDevilsAdvocate = turn.isDevilsAdvocate),
                         )
+                        webSession.turnsAtCurrentLevel = if (level == webSession.currentLevel) webSession.turnsAtCurrentLevel + 1 else 0
                         webSession.currentLevel = level
                         webSession.isComplete = turn.isComplete
                         persist(webSession)

@@ -17,4 +17,7 @@ class WebTutorSession(
     var currentLevel: BloomLevel = BloomLevel.REMEMBER
     var isComplete: Boolean = false
     var imagePath: String? = null
+
+    /** Consecutive follow-up turns spent at [currentLevel] without advancing - see PromptBuilder.FORCE_ADVANCE_AFTER_TURNS. */
+    var turnsAtCurrentLevel: Int = 0
 }

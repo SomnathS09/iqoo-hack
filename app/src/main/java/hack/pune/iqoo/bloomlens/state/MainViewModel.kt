@@ -172,6 +172,8 @@ class MainViewModel(
                 currentLevel = current.session.currentLevel,
                 previousQuestion = lastTutorMessage,
                 userAnswer = trimmed,
+                forceAdvance = current.session.turnsAtCurrentLevel >= PromptBuilder.FORCE_ADVANCE_AFTER_TURNS &&
+                    current.session.currentLevel != BloomLevel.CREATE,
             )
             llm.generateTutorTurn(prompt)
                 .onSuccess { turn -> applyTutorTurn(turn) }
@@ -265,6 +267,7 @@ class MainViewModel(
         val reply = listOfNotNull(turn.feedback.takeIf { it.isNotBlank() }, turn.message.takeIf { it.isNotBlank() })
             .joinToString("\n\n")
         val justCompleted = !latest.session.isComplete && turn.isComplete
+        val turnsAtLevel = if (level == latest.session.currentLevel) latest.session.turnsAtCurrentLevel + 1 else 0
         _state.value = latest.copy(
             session = latest.session.copy(
                 messages = latest.session.messages + ChatEntry(
@@ -275,6 +278,7 @@ class MainViewModel(
                 ),
                 currentLevel = level,
                 isComplete = turn.isComplete,
+                turnsAtCurrentLevel = turnsAtLevel,
             ),
             sending = false,
         )

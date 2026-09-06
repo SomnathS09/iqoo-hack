@@ -15,6 +15,8 @@ data class TutorSession(
     val messages: List<ChatEntry>,
     val currentLevel: BloomLevel,
     val isComplete: Boolean,
+    /** Consecutive follow-up turns spent at [currentLevel] without advancing - see PromptBuilder.FORCE_ADVANCE_AFTER_TURNS. */
+    val turnsAtCurrentLevel: Int = 0,
 )
 
 sealed interface AppScreenState {
