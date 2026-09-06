@@ -49,6 +49,18 @@ fun BloomLensRoot(viewModel: MainViewModel) {
     }
     BackHandler(enabled = showProviderMode) { showProviderMode = false }
 
+    // The tutor chat is reached from the camera screen but isn't a real back-stack entry
+    // either, so back would otherwise exit the app instead of returning to the camera. Reuses
+    // the same onNewProblem() reset already wired to the "Scan a New Problem"/"Try again"
+    // buttons, rather than adding a second way to unwind this state - the in-progress session
+    // is already persisted to History on every turn, so nothing is lost, and no new Bitmap or
+    // ViewModel state is retained: onNewProblem() drops the Tutoring state (and its frame
+    // Bitmap) from the single StateFlow that holds it, leaving it unreferenced for GC exactly
+    // as it already does for those buttons today.
+    BackHandler(enabled = historyView == null && !showProviderMode && state is AppScreenState.Tutoring) {
+        viewModel.onNewProblem()
+    }
+
     // Applied once here rather than per-screen: on Android 15+ (and this app's edge-to-edge
     // layout generally) content draws behind the system navigation bar by default, so
     // bottom-anchored controls (the shutter FAB, send button, etc.) end up under/behind it
