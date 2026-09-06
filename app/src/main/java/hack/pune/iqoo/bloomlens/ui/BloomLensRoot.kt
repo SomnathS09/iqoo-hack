@@ -1,5 +1,6 @@
 package hack.pune.iqoo.bloomlens.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -33,6 +34,18 @@ fun BloomLensRoot(viewModel: MainViewModel) {
     if (showRewards) {
         RewardsDialog(stars = stars, onRedeem = viewModel::onRedeemReward, onDismiss = viewModel::onCloseRewards)
     }
+
+    // Both History and Provider Mode are plain conditionally-shown composables, not real
+    // navigation entries, so the system back button needs to be told about them explicitly -
+    // otherwise it falls through to the default "no back stack" behavior and exits the app.
+    BackHandler(enabled = historyView != null) {
+        if (historyView is HistoryViewState.DetailView) {
+            viewModel.onBackFromHistoryDetail()
+        } else {
+            viewModel.onCloseHistory()
+        }
+    }
+    BackHandler(enabled = showProviderMode) { showProviderMode = false }
 
     if (showProviderMode) {
         ProviderModeScreen(onClose = { showProviderMode = false })
